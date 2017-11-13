@@ -1,8 +1,8 @@
 #!/usr/bin/env php
 <?php
 
-ini_set('display_errors', 0);
-ini_set('error_reporting', 0);
+ini_set('display_errors', 1);
+ini_set('error_reporting', E_ALL);
 if (!file_exists('vendor/autoload.php')) {
     die('[FATAL ERROR] You need to run: composer install'.PHP_EOL);
 }
@@ -48,10 +48,10 @@ $console->register('migrate')
         }
 
         $db->query('SET SESSION sql_mode = \'ANSI\'');
-        if (!$db->query('SHOW CHARACTER SET WHERE Charset = "utf8mb4"')->num_rows) {
-            $config->charset = 'utf8';
-            $output->writeln('[WARN] Since your MySQL Database Server does not support the UTF8MB4 character set, we will be using UTF8 as the default charset.');
-        }
+        //if (!$db->query('SHOW CHARACTER SET WHERE Charset = "utf8mb4"')->num_rows) {
+            $config->charset = 'utf8mb4';
+            //$output->writeln('[WARN] Since your MySQL Database Server does not support the UTF8MB4 character set, we will be using UTF8 as the default charset.');
+        //}
         $db->set_charset($config->charset);
 
         if ($input->getOption('phase') === null || intval($input->getOption('phase')) === 1) {
@@ -65,22 +65,22 @@ $console->register('migrate')
                 return $output->writeln('[ERROR] The must create a separate database to contain the migrated data.');
             }
 
-            if (!$db->query(sprintf('SHOW TABLE STATUS FROM %s WHERE Name = "%s"', $config->database, $input->getOption('board'))->num_rows)) {
-                return $output->writeln(sprintf('[ERROR] The migration table %s.%s does not exist.'), $config->database, $input->getOption('board'));
-            }
+            //if (!$db->query(sprintf('SHOW TABLE STATUS FROM %s WHERE Name = "%s"', $config->database, $input->getOption('board')))) {
+            //    return $output->writeln(sprintf('[ERROR] The migration table %s.%s does not exist.', $config->database, $input->getOption('board')));
+            //}
 
-            if (!$db->query(sprintf('SHOW TABLE STATUS FROM %s WHERE Name = "%s"', $input->getOption('import-database'), $input->getOption('board'))->num_rows)) {
-                $output->writeln(sprintf('[WARN] The table %s.%s does not contain any data.', $input->getOption('import-database'), $input->getOption('board')));
-                return $output->writeln('Done.');
-            }
+            //if (!$db->query(sprintf('SHOW TABLE STATUS FROM %s WHERE Name = "%s"', $input->getOption('import-database'), $input->getOption('board'))->num_rows)) {
+            //    $output->writeln(sprintf('[WARN] The table %s.%s does not contain any data.', $input->getOption('import-database'), $input->getOption('board')));
+            //    return $output->writeln('Done.');
+            //}
 
             // default variables
             $cur_doc_id = 0;
             $max_doc_id = 0;
-            $save_state = 'save-1-rebuild-'.$input->getOption('board');
+            $save_state = 'save-1-rebuild-'.$input->getOption('import-database').'-'.$input->getOption('board');
 
             // populate variables
-            $max_doc_id_res = $db->query('SELECT MAX(doc_id) AS total FROM "%s"."%s"');
+            $max_doc_id_res = $db->query('SELECT MAX(doc_id) AS total FROM "'.$input->getOption('import-database').'"."'.$input->getOption('board').'"');
             if ($db->error) {
                 return $output->writeln(sprintf('[DATABASE ERROR] %s', $db->error));
             }
@@ -158,7 +158,7 @@ $console->register('migrate')
             $new_work_path = $config->path.'/'.$input->getOption('board');
 
             // populate variables
-            $max_doc_id_res = $db->query('SELECT MAX(doc_id) AS total FROM "%s"."%s"');
+            $max_doc_id_res = $db->query('SELECT MAX(doc_id) AS total FROM "'.$config->database.'"."'.$input->getOption('board').'"');
             if ($db->error) {
                 return $output->writeln(sprintf('[DATABASE ERROR] %s', $db->error));
             }
@@ -191,7 +191,7 @@ $console->register('migrate')
                             ON brd.media_id = img.media_id
                         WHERE doc_id >= %d AND doc_id <= %d
                     ',
-                    $config->database, $input->getOption('board'), $config->database, $input->getOption('board'),
+                    $config->database, $input->getOption('board'), $config->database, $input->getOption('board')."_images",
                     $cur_doc_id, $cur_doc_id + intval($input->getOption('chunk'))
                 ));
                 if ($db->error) {
@@ -234,11 +234,11 @@ $console->register('migrate')
                         $new_full_image_path_inner = substr($row->media, 0, 4) . '/' . substr($row->media, 4, 2);
 
                         // make the full paths
-                        $old_full_image_path = $old_work_path . '/img/' . $old_full_image_path_inner . '/' . $row->media_filename;
+                        $old_full_image_path = $old_work_path . '/img/' . $old_full_image_path_inner . '/' . $row->media;
                         $new_full_image_path = $new_work_path . '/image/' . $new_full_image_path_inner . '/' . $row->media;
 
                         if (!isset($temp['image'][$row->media_id])) {
-                            if (!file_exists($new_image_path)) {
+                            if (!file_exists($new_full_image_path)) {
                                 @mkdir($new_work_path.'/image/'.$new_full_image_path_inner, 0777, true);
                                 if (@copy($old_full_image_path, $new_full_image_path)) {
                                     $temp['image'][$row->media_id] = true;
