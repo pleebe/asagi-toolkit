@@ -1,0 +1,14 @@
+{
+    "name": "pleebe/import10bil",
+    "description": "Import 10 billion thread dump to Asagi/FoolFuuka database",
+    "authors": [
+        {
+            "name": "pleebe",
+            "email": "pleebe@4plebs.org"
+        }
+    ],
+    "require": {
+        "doctrine/dbal": "^2.8",
+        "symfony/console": "^4.1"
+    }
+}
