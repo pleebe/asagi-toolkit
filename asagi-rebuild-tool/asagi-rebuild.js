@@ -29,12 +29,12 @@ cmd
   .parse(process.argv);
 
 var board = cmd.board;
-var src_database = cmd.database1 || 'asagi';
-var dst_database = cmd.database2 || 'asagi';
-var src_path = cmd.mediaSrc || '/home/archive/src/board/';
-var dst_path = cmd.mediaDst || '/home/archive/dst/board/';
-var process_images = cmd.images;
-var process_thumbs = cmd.thumbs;
+var src_database = cmd.srcDatabase || 'asagi';
+var dst_database = cmd.dstDatabase || 'asagi';
+var src_path = cmd.srcPath || '/home/archive/src/board/';
+var dst_path = cmd.dstPath || '/home/archive/dst/board/';
+var process_images = cmd.processImages;
+var process_thumbs = cmd.processThumbs;
 var offset = cmd.offset || 0;
 
 var pad = function (s, w, z) {
@@ -80,16 +80,16 @@ var rebuild = function (info, data, max_len, max_num) {
       if (data.src.preview_op !== null && data.dst.preview_op !== null) {
         restore(
           { num: data.dst.media_id, len: max_len },
-          { path: info.srcPath + info.board + '/image/' + data.src.preview_op.substr(0, 4) + '/' + data.src.preview_op.substr(4, 2) + '/', file: data.src.preview_op },
-          { path: info.dstPath + info.board + '/image/' + data.dst.preview_op.substr(0, 4) + '/' + data.dst.preview_op.substr(4, 2) + '/', file: data.dst.preview_op }
+          { path: info.srcPath + info.board + '/thumb/' + data.src.preview_op.substr(0, 4) + '/' + data.src.preview_op.substr(4, 2) + '/', file: data.src.preview_op },
+          { path: info.dstPath + info.board + '/thumb/' + data.dst.preview_op.substr(0, 4) + '/' + data.dst.preview_op.substr(4, 2) + '/', file: data.dst.preview_op }
         );
       }
 
       if (data.src.preview_reply !== null && data.dst.preview_reply !== null) {
         restore(
           { num: data.dst.media_id, len: max_len },
-          { path: info.srcPath + info.board + '/image/' + data.src.preview_reply.substr(0, 4) + '/' + data.src.preview_reply.substr(4, 2) + '/', file: data.src.preview_reply },
-          { path: info.dstPath + info.board + '/image/' + data.dst.preview_reply.substr(0, 4) + '/' + data.dst.preview_reply.substr(4, 2) + '/', file: data.dst.preview_reply }
+          { path: info.srcPath + info.board + '/thumb/' + data.src.preview_reply.substr(0, 4) + '/' + data.src.preview_reply.substr(4, 2) + '/', file: data.src.preview_reply },
+          { path: info.dstPath + info.board + '/thumb/' + data.dst.preview_reply.substr(0, 4) + '/' + data.dst.preview_reply.substr(4, 2) + '/', file: data.dst.preview_reply }
         );
       }
     }
@@ -98,21 +98,22 @@ var rebuild = function (info, data, max_len, max_num) {
 
 sql
   .max('media_id as total')
-  .from(database2 + '.' + board + '_images').then(function (res) {
+  .from(dst_database + '.' + board + '_images').then(function (res) {
     var max_doc_id = res[0].total;
     var max_len_id = max_doc_id.toString().length;
 
     while (offset < max_doc_id) {
-      knex.select(['src.*', 'dst.*'])
-        .from(database2 + '.' + board + '_images as dst')
-        .leftJoin(database1 + '.' + board + '_images as src', 'src.media_hash', '=', 'dst.media_hash')
+      sql.select(['src.*', 'dst.*'])
+        .from(dst_database + '.' + board + '_images as dst')
+        .leftJoin(src_database + '.' + board + '_images as src', 'src.media_hash', '=', 'dst.media_hash')
         .whereBetween('dst.media_id', [parseInt(offset) - 5, parseInt(offset) + 1000])
         .options({ nestTables: true, rowMode: 'array' })
         .stream(function (stream) {
           stream.on('data', function (data) {
-            rebuild({ board: board, srcPath: src_path, dstPath: dst_path, images: process_images; thumbs: process_thumbs }, data, max_len_id, max_doc_id);
+            rebuild({ board: board, srcPath: src_path, dstPath: dst_path, images: process_images, thumbs: process_thumbs }, data, max_len_id, max_doc_id);
           });
         });
       offset += 1000;
     }
   });
+

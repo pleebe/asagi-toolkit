@@ -13,7 +13,7 @@ $ node asagi-rebuild.js [options]
 
 ```
 $ npm install commander fs-extra knex mysql
-$ cp lib/runner.js node_module/knex/lib/dialects/mysql/runner.js
+$ cp lib/runner.js node_modules/knex/lib/dialects/mysql/runner.js
 $ cp config.json.example config.json
 $ (nano|vi) config.json
 ```
@@ -21,7 +21,7 @@ $ (nano|vi) config.json
 ### Example
 
 ```
-$ node asagi-rebuild.js -b a -d asagi -f asagi_dump -s "/var/data/asagi-dump/" -p "/var/data/boards/" -i -t
+$ node asagi-rebuild.js -b a -d asagi_dump -f asagi -s "/var/data/asagi-dump/" -p "/var/data/boards/" -i -t
 ```
 Note: This will tell the tool to use the data from `asagi_dump` to import the media files located at `/var/data/asagi-dump/` into `/var/data/boards/`.
 
